@@ -10,15 +10,17 @@ package cache
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sync"
+	"time"
+
+	gdbadapter "github.com/eyasliu/gcache-db-adapter"
 	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gcache"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/tiger1103/gfast-cache/instance"
-	"reflect"
-	"sync"
-	"time"
 )
 
 type IGCache interface {
@@ -66,6 +68,18 @@ func NewRedis(cachePrefix string) *GfCache {
 		cache := &GfCache{
 			CachePrefix: cachePrefix,
 			cache:       gcache.NewWithAdapter(gcache.NewAdapterRedis(g.Redis())),
+		}
+		return cache
+	})
+	return cache.(*GfCache)
+}
+
+func NewDatabase(cachePrefix string, tableName string, gdbName string) *GfCache {
+	instanceKey := fmt.Sprintf("%s:%s.%s", tableName, cachePrefix, "adapterDatabase")
+	cache := instance.GetOrSetFuncLock(instanceKey, func() interface{} {
+		cache := &GfCache{
+			CachePrefix: cachePrefix,
+			cache:       gcache.NewWithAdapter(gdbadapter.NewAdapterGdb(tableName, g.DB(gdbName))),
 		}
 		return cache
 	})
